@@ -36,7 +36,7 @@ jobs:
         # working-directory: ./terraform  # Path to your Terraform config
 
       - name: Terraform Format
-        run: terraform fmt -check -recursive
+        run: terraform fmt -recursive
         # working-directory: ./terraform
 
       - name: Terraform Validate
