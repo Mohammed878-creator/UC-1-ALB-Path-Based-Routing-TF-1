@@ -1,0 +1,4 @@
+.devcontainer
+.terraform/provider*
+terraform.tfstate.backup
+
