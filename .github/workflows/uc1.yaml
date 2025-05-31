@@ -20,11 +20,18 @@ jobs:
     steps:
       
       # OIDC
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: arn:aws:iam::994466158061:oidc-provider/token.actions.githubusercontent.com
+      #     aws-region: ap-south-1
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::994466158061:oidc-provider/token.actions.githubusercontent.com
-          aws-region: ap-south-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
       # Checkout the repository
       - name: Checkout
