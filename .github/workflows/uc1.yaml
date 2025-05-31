@@ -1,67 +1,55 @@
-
-name: Terraform AWS VPC & Nginx
+name: Terraform CI
 
 on:
   workflow_dispatch:
-    inputs:
-      action:
-        description: 'Terraform Action'
-        required: true
-        default: 'apply'
-        type: choice
-        options:
-          - apply
-          - destroy
+
+env:
+  TF_VERSION: latest
+  AWS_REGION: us-east-1
 
 jobs:
   terraform:
-    name: Terraform ${{ github.event.inputs.action }}
+    name: Terraform
     runs-on: ubuntu-latest
-    
-    env:
-      AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
-
-    defaults:
-      run:
-        shell: bash
+    environment: production  # Optional: for environment protection
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2
-        # with:
-        #   terraform_version: 1.6.6
-
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Format Terraform code
-        run: terraform fmt -recursive
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
-      - name: Initialize Terraform
+      - name: Terraform Init
+        id: init
         run: terraform init
+        working-directory: ./terraform  # Path to your Terraform config
 
-      - name: Validate Terraform
+      - name: Terraform Format
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform
+
+      - name: Terraform Validate
         run: terraform validate
+        working-directory: ./terraform
 
       - name: Terraform Plan
-        if: github.event.inputs.action == 'apply'
-        run: terraform plan -out=tfplan.binary
+        id: plan
+        run: |
+          terraform plan
+        working-directory: ./terraform
 
-      - name: Show Terraform Plan Summary
-        if: github.event.inputs.action == 'apply'
-        run: terraform show -no-color tfplan.binary
-
-      - name: Terraform Apply (from saved plan)
-        if: github.event.inputs.action == 'apply'
-        run: terraform apply -auto-approve tfplan.binary
-
-      - name: Terraform Destroy
-        if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve
+      - name: Terraform Apply
+        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
