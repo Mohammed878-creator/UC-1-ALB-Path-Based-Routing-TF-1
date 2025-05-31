@@ -85,7 +85,7 @@ security_groups = [aws_security_group.alb.id]
 # EC2 Instances
 resource "aws_instance" "app" {
   count                  = 3
-  ami                    = "ami-0af9569868786b23a"
+  ami                    = "ami-0e35ddab05955cf57"
   instance_type          = "t3.micro"
   subnet_id              = aws_subnet.public[count.index].id
   associate_public_ip_address = true
