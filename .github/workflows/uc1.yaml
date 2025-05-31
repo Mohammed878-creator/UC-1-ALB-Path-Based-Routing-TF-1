@@ -1,4 +1,4 @@
-name: Terraform CI
+name: ALB-Path-based-Routing-Nginx-App
 
 on:
   workflow_dispatch:
