@@ -1,6 +1,6 @@
 #Provider
 provider "aws" {
-  region = "ap-south-1"
+  region = "us-east-2"
 }
  
 # VPC and Networking
@@ -21,7 +21,7 @@ resource "aws_subnet" "public" {
   count             = 3
 vpc_id = aws_vpc.demo-vpc-uc1.id
   cidr_block        = "10.0.${count.index + 1}.0/24"
-  availability_zone = element(["ap-south-1a", "ap-south-1b", "ap-south-1c"], count.index)
+  availability_zone = element(["us-east-2a", "us-east-2b", "us-east-2c"], count.index)
   tags = {
     Name = "public-subnet-${count.index + 1}"
   }
@@ -85,21 +85,21 @@ security_groups = [aws_security_group.alb.id]
 # EC2 Instances
 resource "aws_instance" "app" {
   count                  = 3
-  ami                    = "ami-0e35ddab05955cf57"
+  ami                    = "ami-04f167a56786e4b09"
   instance_type          = "t3.micro"
   subnet_id              = aws_subnet.public[count.index].id
   associate_public_ip_address = true
   vpc_security_group_ids = [aws_security_group.ec2.id]
   user_data              = <<-EOF
     #!/bin/bash
-    sudo yum update -y
-    sudo yum install -y httpd
-    sudo systemctl start httpd
-    sudo systemctl enable httpd
+    sudo apt-get update -y
+    sudo apt-get install nginx -y
+    sudo systemctl start nginx
+    sudo systemctl enable nginx
     sudo mkdir -p /var/www/html/{images,register}
-    echo "Home Page $(hostname)" > /var/www/html/index.html
-    echo "Images Page $(hostname)" > /var/www/html/images/index.html
-    echo "Register Page $(hostname)" > /var/www/html/register/index.html
+    echo "Home Page $(hostname) Instance A" | sudo tee /var/www/html/index.html
+    echo "Images Page $(hostname) Instance B" | sudo tee /var/www/html/images/index.html
+    echo "Register Page $(hostname) Instance C" | sudo tee /var/www/html/register/index.html
   EOF
   tags = {
     Name = "app-instance-${count.index + 1}"
