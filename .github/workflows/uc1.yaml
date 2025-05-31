@@ -33,23 +33,23 @@ jobs:
       - name: Terraform Init
         id: init
         run: terraform init
-        working-directory: ./terraform  # Path to your Terraform config
+        # working-directory: ./terraform  # Path to your Terraform config
 
       - name: Terraform Format
         run: terraform fmt -check -recursive
-        working-directory: ./terraform
+        # working-directory: ./terraform
 
       - name: Terraform Validate
         run: terraform validate
-        working-directory: ./terraform
+        # working-directory: ./terraform
 
       - name: Terraform Plan
         id: plan
         run: |
           terraform plan
-        working-directory: ./terraform
+        # working-directory: ./terraform
 
       - name: Terraform Apply
         # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve
-        working-directory: ./terraform
+        # working-directory: ./terraform
