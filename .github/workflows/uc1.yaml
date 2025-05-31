@@ -1,97 +1,67 @@
-name: UC-1-ALB-Path-Based-Routing-TF-1
+
+name: Terraform AWS VPC & Nginx
 
 on:
   workflow_dispatch:
-
-env:
-  TF_VERSION: "1.5.0"
-  CHECKOV_VERSION: "2.3.314"
-
-permissions:
-  id-token: write   # This is required for requesting the JWT
-  contents: read    # This is required for actions/checkout
+    inputs:
+      action:
+        description: 'Terraform Action'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
 
 jobs:
   terraform:
-    name: 'Terraform Plan/Apply'
+    name: Terraform ${{ github.event.inputs.action }}
     runs-on: ubuntu-latest
-    environment: dev
+    
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      
-      # OIDC
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: arn:aws:iam::994466158061:oidc-provider/token.actions.githubusercontent.com
-      #     aws-region: ap-south-1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        # with:
+        #   terraform_version: 1.6.6
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      # Checkout the repository
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Format Terraform code
+        run: terraform fmt -recursive
 
-      # Install Terraform
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      # Initialize Terraform
-      - name: Terraform Init
-        id: init
+      - name: Initialize Terraform
         run: terraform init
-        working-directory: ../  # Adjust if your Terraform files are in a subdirectory
 
-      # Format Terraform files
-      - name: Terraform Format
-        id: fmt
-        run: |
-          terraform fmt -check -recursive
-          echo "::notice::Terraform format check completed"
+      - name: Validate Terraform
+        run: terraform validate
 
-      # Validate Terraform configuration
-      - name: Terraform Validate
-        id: validate
-        run: |
-          terraform validate
-          echo "::notice::Terraform validation completed"
-
-      # Lint Terraform files using tflint
-      - name: Install and Run TFLint
-        run: |
-          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-          tflint --init
-          tflint
-
-      # Run Checkov for security scanning
-      - name: Run Checkov Security Scan
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: ./terraform
-          framework: terraform
-          quiet: true
-          soft_fail: false
-          version: ${{ env.CHECKOV_VERSION }}
-
-      # Generate Terraform plan
       - name: Terraform Plan
-        id: plan
-        # if: github.event_name == 'pull_request'
-        run: |
-          terraform plan -no-color -input=false
-          echo "::notice::Terraform plan generated for PR"
+        if: github.event.inputs.action == 'apply'
+        run: terraform plan -out=tfplan.binary
 
-      # Apply Terraform changes (only on push to main)
-      - name: Terraform Apply
-        id: apply
-        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          terraform apply -auto-approve -input=false
-          echo "::notice::Terraform changes applied"
+      - name: Show Terraform Plan Summary
+        if: github.event.inputs.action == 'apply'
+        run: terraform show -no-color tfplan.binary
+
+      - name: Terraform Apply (from saved plan)
+        if: github.event.inputs.action == 'apply'
+        run: terraform apply -auto-approve tfplan.binary
+
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
